@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+*.tflite  # Optional, but typically we might want to ignore large models. Wait, the model is required for the code to run. I'll NOT ignore the model.
+.DS_Store

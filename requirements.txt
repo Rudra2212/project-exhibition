@@ -1,0 +1,7 @@
+opencv-python<4.11
+mediapipe==0.10.14
+tensorflow<2.16
+jax<0.4.24
+jaxlib<0.4.24
+numpy
+Pillow
