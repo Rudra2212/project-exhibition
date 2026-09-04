@@ -77,7 +77,7 @@ class SignLanguageApp:
         self.title_label.pack(pady=(25, 20))
         
         # Detected Letter Widget
-        self.letter_title = ctk.CTkLabel(self.right_frame, text="Current Letter", font=ctk.CTkFont(size=14, text_color="gray"))
+        self.letter_title = ctk.CTkLabel(self.right_frame, text="Current Letter", font=ctk.CTkFont(size=14), text_color="gray")
         self.letter_title.pack(pady=(10, 0))
         
         self.current_letter_var = ctk.StringVar(value="-")
@@ -86,7 +86,7 @@ class SignLanguageApp:
         self.current_letter_label.pack(pady=(0, 20))
         
         # Sentence Textbox
-        self.sentence_title = ctk.CTkLabel(self.right_frame, text="Word / Sentence", font=ctk.CTkFont(size=14, text_color="gray"))
+        self.sentence_title = ctk.CTkLabel(self.right_frame, text="Word / Sentence", font=ctk.CTkFont(size=14), text_color="gray")
         self.sentence_title.pack(pady=(10, 5), anchor="w", padx=20)
         
         self.sentence_text = ctk.CTkTextbox(self.right_frame, height=120, font=ctk.CTkFont(size=20), 
