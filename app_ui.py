@@ -15,15 +15,15 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from keypoint_classifier import KeyPointClassifier
 
 # Set Modern UI Theme
-ctk.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
-ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("blue")
 
 class SignLanguageApp:
     def __init__(self, window, window_title):
         self.window = window
         self.window.title(window_title)
-        self.window.geometry("1050x650")
-        self.window.minsize(900, 600)
+        self.window.geometry("1100x700")
+        self.window.minsize(950, 650)
         
         # Load Labels
         self.labels = []
@@ -54,26 +54,59 @@ class SignLanguageApp:
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         
         # ----------------------------------------------------
-        # UI LAYOUT
+        # UI LAYOUT WITH BACKGROUND DESIGN
         # ----------------------------------------------------
-        self.window.grid_columnconfigure(0, weight=1)
-        self.window.grid_columnconfigure(1, weight=0)
         self.window.grid_rowconfigure(0, weight=1)
+        self.window.grid_columnconfigure(0, weight=1)
         
-        # Left Panel (Video Frame)
-        self.video_frame = ctk.CTkFrame(self.window, corner_radius=15, fg_color="#1e1e21")
-        self.video_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+        # Main Background Wrapper (Gives the app a nice outer canvas)
+        self.main_bg = ctk.CTkFrame(self.window, fg_color=("#f0f2f5", "#141416"), corner_radius=0)
+        self.main_bg.grid(row=0, column=0, sticky="nsew")
+        
+        self.main_bg.grid_columnconfigure(0, weight=1)
+        self.main_bg.grid_columnconfigure(1, weight=0)
+        self.main_bg.grid_rowconfigure(0, weight=1)
+        
+        # --- LEFT PANEL (Header & Camera) ---
+        self.left_panel = ctk.CTkFrame(self.main_bg, fg_color="transparent")
+        self.left_panel.grid(row=0, column=0, padx=25, pady=25, sticky="nsew")
+        self.left_panel.grid_rowconfigure(1, weight=1)
+        self.left_panel.grid_columnconfigure(0, weight=1)
+        
+        # Header inside Left Panel
+        self.left_header = ctk.CTkFrame(self.left_panel, fg_color="transparent")
+        self.left_header.grid(row=0, column=0, sticky="ew", pady=(0, 20))
+        
+        # Dark/Light Mode Toggle Switch
+        self.theme_switch_var = ctk.StringVar(value="Dark")
+        self.theme_switch = ctk.CTkSwitch(self.left_header, text="Dark Mode", command=self.toggle_theme,
+                                          variable=self.theme_switch_var, onvalue="Dark", offvalue="Light",
+                                          font=ctk.CTkFont(size=14, weight="bold"))
+        self.theme_switch.pack(side="left")
+        
+        # Camera Title (Centered above camera)
+        self.camera_title = ctk.CTkLabel(self.left_header, text="Sign Language Detector", 
+                                         font=ctk.CTkFont(size=32, weight="bold", family="Helvetica"))
+        self.camera_title.pack(side="left", expand=True, padx=(0, 100)) # Offset slightly to center visually
+        
+        # Video Frame Wrapper (Design element with borders)
+        self.video_frame = ctk.CTkFrame(self.left_panel, corner_radius=20, 
+                                        fg_color=("#ffffff", "#1e1e21"), 
+                                        border_width=2, border_color=("#d1d5db", "#333333"))
+        self.video_frame.grid(row=1, column=0, sticky="nsew")
         
         self.video_label = ctk.CTkLabel(self.video_frame, text="")
-        self.video_label.pack(expand=True, fill="both", padx=10, pady=10)
+        self.video_label.pack(expand=True, fill="both", padx=15, pady=15)
         
-        # Right Panel (Controls & Text)
-        self.right_frame = ctk.CTkFrame(self.window, width=350, corner_radius=15)
-        self.right_frame.grid(row=0, column=1, padx=(0, 20), pady=20, sticky="nsew")
-        self.right_frame.grid_propagate(False) # Keep width fixed
+        # --- RIGHT PANEL (Controls & Sidebar) ---
+        self.right_frame = ctk.CTkFrame(self.main_bg, width=380, corner_radius=20, 
+                                        fg_color=("#ffffff", "#1e1e21"),
+                                        border_width=2, border_color=("#d1d5db", "#333333"))
+        self.right_frame.grid(row=0, column=1, padx=(0, 25), pady=25, sticky="nsew")
+        self.right_frame.grid_propagate(False)
         
-        # Title
-        self.title_label = ctk.CTkLabel(self.right_frame, text="ASL Translator", font=ctk.CTkFont(size=28, weight="bold"))
+        # Title inside Controls
+        self.title_label = ctk.CTkLabel(self.right_frame, text="Live Translation", font=ctk.CTkFont(size=24, weight="bold"))
         self.title_label.pack(pady=(25, 20))
         
         # Detected Letter Widget
@@ -82,22 +115,23 @@ class SignLanguageApp:
         
         self.current_letter_var = ctk.StringVar(value="-")
         self.current_letter_label = ctk.CTkLabel(self.right_frame, textvariable=self.current_letter_var, 
-                                                 font=ctk.CTkFont(size=80, weight="bold"), text_color="#3a7ebf")
+                                                 font=ctk.CTkFont(size=90, weight="bold"), text_color="#3a7ebf")
         self.current_letter_label.pack(pady=(0, 20))
         
         # Sentence Textbox
         self.sentence_title = ctk.CTkLabel(self.right_frame, text="Word / Sentence", font=ctk.CTkFont(size=14), text_color="gray")
-        self.sentence_title.pack(pady=(10, 5), anchor="w", padx=20)
+        self.sentence_title.pack(pady=(10, 5), anchor="w", padx=25)
         
-        self.sentence_text = ctk.CTkTextbox(self.right_frame, height=120, font=ctk.CTkFont(size=20), 
-                                            corner_radius=10, border_width=1, border_color="#333333")
-        self.sentence_text.pack(fill="x", padx=20, pady=(0, 20))
+        self.sentence_text = ctk.CTkTextbox(self.right_frame, height=140, font=ctk.CTkFont(size=22), 
+                                            corner_radius=12, border_width=1, border_color=("#cccccc", "#444444"),
+                                            fg_color=("#f9fafb", "#18181a"))
+        self.sentence_text.pack(fill="x", padx=25, pady=(0, 20))
         
         # Settings
         self.auto_add_var = ctk.BooleanVar(value=True)
         self.auto_checkbox = ctk.CTkCheckBox(self.right_frame, text="Auto-type (hold sign for 1.5s)", variable=self.auto_add_var,
-                                             font=ctk.CTkFont(size=13))
-        self.auto_checkbox.pack(pady=(0, 20), padx=20, anchor="w")
+                                             font=ctk.CTkFont(size=14))
+        self.auto_checkbox.pack(pady=(0, 25), padx=25, anchor="w")
         
         # Button Grid
         self.btn_frame = ctk.CTkFrame(self.right_frame, fg_color="transparent")
@@ -106,16 +140,16 @@ class SignLanguageApp:
         self.btn_frame.grid_columnconfigure(0, weight=1)
         self.btn_frame.grid_columnconfigure(1, weight=1)
         
-        self.btn_add = ctk.CTkButton(self.btn_frame, text="Type Letter", height=40, command=self.add_letter)
+        self.btn_add = ctk.CTkButton(self.btn_frame, text="Type Letter", height=45, font=ctk.CTkFont(size=14, weight="bold"), command=self.add_letter)
         self.btn_add.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         
-        self.btn_space = ctk.CTkButton(self.btn_frame, text="Space", height=40, command=self.add_space, fg_color="#444444", hover_color="#555555")
+        self.btn_space = ctk.CTkButton(self.btn_frame, text="Space", height=45, font=ctk.CTkFont(size=14, weight="bold"), command=self.add_space, fg_color=("#71717a", "#444444"), hover_color=("#52525b", "#555555"))
         self.btn_space.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
         
-        self.btn_back = ctk.CTkButton(self.btn_frame, text="Backspace", height=40, command=self.backspace, fg_color="#8B0000", hover_color="#5C0000")
+        self.btn_back = ctk.CTkButton(self.btn_frame, text="Backspace", height=45, font=ctk.CTkFont(size=14, weight="bold"), command=self.backspace, fg_color="#ef4444", hover_color="#dc2626")
         self.btn_back.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
         
-        self.btn_clear = ctk.CTkButton(self.btn_frame, text="Clear All", height=40, command=self.clear_text, fg_color="#8B0000", hover_color="#5C0000")
+        self.btn_clear = ctk.CTkButton(self.btn_frame, text="Clear All", height=45, font=ctk.CTkFont(size=14, weight="bold"), command=self.clear_text, fg_color="#ef4444", hover_color="#dc2626")
         self.btn_clear.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
         
         # Keyboard Bindings
@@ -131,6 +165,14 @@ class SignLanguageApp:
         # Start Loop
         self.update_frame()
         
+    def toggle_theme(self):
+        theme = self.theme_switch_var.get()
+        ctk.set_appearance_mode(theme)
+        if theme == "Light":
+            self.theme_switch.configure(text="Light Mode")
+        else:
+            self.theme_switch.configure(text="Dark Mode")
+            
     def add_letter(self):
         char = self.current_letter_var.get()
         if char and len(char) == 1 and char != '-':
