@@ -1,5 +1,4 @@
-import tkinter as tk
-from tkinter import ttk
+import customtkinter as ctk
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -15,10 +14,16 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from keypoint_classifier import KeyPointClassifier
 
+# Set Modern UI Theme
+ctk.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
+ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+
 class SignLanguageApp:
     def __init__(self, window, window_title):
         self.window = window
         self.window.title(window_title)
+        self.window.geometry("1050x650")
+        self.window.minsize(900, 600)
         
         # Load Labels
         self.labels = []
@@ -48,65 +53,99 @@ class SignLanguageApp:
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         
-        # UI Elements
-        self.main_frame = ttk.Frame(window, padding=10)
-        self.main_frame.pack(fill=tk.BOTH, expand=True)
+        # ----------------------------------------------------
+        # UI LAYOUT
+        # ----------------------------------------------------
+        self.window.grid_columnconfigure(0, weight=1)
+        self.window.grid_columnconfigure(1, weight=0)
+        self.window.grid_rowconfigure(0, weight=1)
         
-        # Left Panel (Video)
-        self.video_label = ttk.Label(self.main_frame)
-        self.video_label.grid(row=0, column=0, rowspan=4, padx=10, pady=10)
+        # Left Panel (Video Frame)
+        self.video_frame = ctk.CTkFrame(self.window, corner_radius=15, fg_color="#1e1e21")
+        self.video_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+        
+        self.video_label = ctk.CTkLabel(self.video_frame, text="")
+        self.video_label.pack(expand=True, fill="both", padx=10, pady=10)
         
         # Right Panel (Controls & Text)
-        self.right_frame = ttk.Frame(self.main_frame)
-        self.right_frame.grid(row=0, column=1, sticky="n")
+        self.right_frame = ctk.CTkFrame(self.window, width=350, corner_radius=15)
+        self.right_frame.grid(row=0, column=1, padx=(0, 20), pady=20, sticky="nsew")
+        self.right_frame.grid_propagate(False) # Keep width fixed
         
-        ttk.Label(self.right_frame, text="Detected Letter:", font=("Helvetica", 14)).pack(anchor="w", pady=5)
-        self.current_letter_var = tk.StringVar(value="-")
-        self.current_letter_label = ttk.Label(self.right_frame, textvariable=self.current_letter_var, font=("Helvetica", 48, "bold"), foreground="blue")
-        self.current_letter_label.pack(pady=10)
+        # Title
+        self.title_label = ctk.CTkLabel(self.right_frame, text="ASL Translator", font=ctk.CTkFont(size=28, weight="bold"))
+        self.title_label.pack(pady=(25, 20))
         
-        ttk.Label(self.right_frame, text="Sentence:", font=("Helvetica", 14)).pack(anchor="w", pady=5)
-        self.sentence_text = tk.Text(self.right_frame, height=5, width=30, font=("Helvetica", 14))
-        self.sentence_text.pack(pady=10)
+        # Detected Letter Widget
+        self.letter_title = ctk.CTkLabel(self.right_frame, text="Current Letter", font=ctk.CTkFont(size=14, text_color="gray"))
+        self.letter_title.pack(pady=(10, 0))
         
-        # Buttons
-        self.btn_frame = ttk.Frame(self.right_frame)
-        self.btn_frame.pack(fill=tk.X, pady=10)
+        self.current_letter_var = ctk.StringVar(value="-")
+        self.current_letter_label = ctk.CTkLabel(self.right_frame, textvariable=self.current_letter_var, 
+                                                 font=ctk.CTkFont(size=80, weight="bold"), text_color="#3a7ebf")
+        self.current_letter_label.pack(pady=(0, 20))
         
-        ttk.Button(self.btn_frame, text="Add Letter (Space)", command=self.add_letter).grid(row=0, column=0, padx=5, pady=5)
-        ttk.Button(self.btn_frame, text="Add Space", command=self.add_space).grid(row=0, column=1, padx=5, pady=5)
-        ttk.Button(self.btn_frame, text="Backspace", command=self.backspace).grid(row=1, column=0, padx=5, pady=5)
-        ttk.Button(self.btn_frame, text="Clear All", command=self.clear_text).grid(row=1, column=1, padx=5, pady=5)
+        # Sentence Textbox
+        self.sentence_title = ctk.CTkLabel(self.right_frame, text="Word / Sentence", font=ctk.CTkFont(size=14, text_color="gray"))
+        self.sentence_title.pack(pady=(10, 5), anchor="w", padx=20)
         
-        self.window.bind('<space>', lambda e: self.add_letter())
+        self.sentence_text = ctk.CTkTextbox(self.right_frame, height=120, font=ctk.CTkFont(size=20), 
+                                            corner_radius=10, border_width=1, border_color="#333333")
+        self.sentence_text.pack(fill="x", padx=20, pady=(0, 20))
+        
+        # Settings
+        self.auto_add_var = ctk.BooleanVar(value=True)
+        self.auto_checkbox = ctk.CTkCheckBox(self.right_frame, text="Auto-type (hold sign for 1.5s)", variable=self.auto_add_var,
+                                             font=ctk.CTkFont(size=13))
+        self.auto_checkbox.pack(pady=(0, 20), padx=20, anchor="w")
+        
+        # Button Grid
+        self.btn_frame = ctk.CTkFrame(self.right_frame, fg_color="transparent")
+        self.btn_frame.pack(fill="x", padx=20)
+        
+        self.btn_frame.grid_columnconfigure(0, weight=1)
+        self.btn_frame.grid_columnconfigure(1, weight=1)
+        
+        self.btn_add = ctk.CTkButton(self.btn_frame, text="Type Letter", height=40, command=self.add_letter)
+        self.btn_add.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        
+        self.btn_space = ctk.CTkButton(self.btn_frame, text="Space", height=40, command=self.add_space, fg_color="#444444", hover_color="#555555")
+        self.btn_space.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        
+        self.btn_back = ctk.CTkButton(self.btn_frame, text="Backspace", height=40, command=self.backspace, fg_color="#8B0000", hover_color="#5C0000")
+        self.btn_back.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        
+        self.btn_clear = ctk.CTkButton(self.btn_frame, text="Clear All", height=40, command=self.clear_text, fg_color="#8B0000", hover_color="#5C0000")
+        self.btn_clear.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        
+        # Keyboard Bindings
+        self.window.bind('<space>', lambda e: self.add_space())
         self.window.bind('<BackSpace>', lambda e: self.backspace())
+        self.window.bind('<Return>', lambda e: self.add_letter())
         
-        # Smoothing mechanism
+        # Logic Variables
         self.history = []
         self.current_stable_char = ""
-        
-        # Auto-add mechanism
-        self.auto_add_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(self.right_frame, text="Auto-type (hold sign for 1.5s)", variable=self.auto_add_var).pack(pady=10)
         self.hold_count = 0
         
+        # Start Loop
         self.update_frame()
         
     def add_letter(self):
         char = self.current_letter_var.get()
         if char and len(char) == 1 and char != '-':
-            self.sentence_text.insert(tk.END, char)
+            self.sentence_text.insert("end", char)
             
     def add_space(self):
-        self.sentence_text.insert(tk.END, " ")
+        self.sentence_text.insert("end", " ")
         
     def backspace(self):
-        current_text = self.sentence_text.get("1.0", tk.END)
-        if len(current_text) > 1:
-            self.sentence_text.delete("end-2c", tk.END)
+        current_text = self.sentence_text.get("1.0", "end-1c")
+        if len(current_text) > 0:
+            self.sentence_text.delete("end-2c", "end-1c")
             
     def clear_text(self):
-        self.sentence_text.delete("1.0", tk.END)
+        self.sentence_text.delete("1.0", "end")
         
     def update_frame(self):
         ret, frame = self.cap.read()
@@ -158,7 +197,7 @@ class SignLanguageApp:
                     elif most_common == 'del':
                         self.backspace()
                     else:
-                        self.sentence_text.insert(tk.END, most_common)
+                        self.sentence_text.insert("end", most_common)
                     self.hold_count = -20 # Cooldown so it doesn't spam
             
             # Convert to Tkinter image
@@ -200,6 +239,6 @@ class SignLanguageApp:
             self.cap.release()
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = SignLanguageApp(root, "ASL Alphabet Detector")
+    root = ctk.CTk()
+    app = SignLanguageApp(root, "ASL Translator - Pro Edition")
     root.mainloop()

@@ -5,3 +5,4 @@ jax<0.4.24
 jaxlib<0.4.24
 numpy
 Pillow
+customtkinter
